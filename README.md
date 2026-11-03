@@ -2,7 +2,7 @@
 
 # Drawer Deck
 
-Turn an old iPod touch, iPhone or PS Vita from your drawer into a Stream Deck-style control panel for your Mac. Nothing is installed on the device: a small server runs on the Mac and the device opens a page in its browser.
+Turn any phone or tablet with a web browser into a Stream Deck-style control panel for your Mac: an iPhone you use every day, or an old iPod touch or PS Vita from your drawer. Nothing is installed on the device: a small server runs on the Mac and the device opens a page in its browser.
 
 ![Drawer Deck in landscape](docs/deck.png)
 
@@ -15,12 +15,18 @@ Turn an old iPod touch, iPhone or PS Vita from your drawer into a Stream Deck-st
 
 The interface text is in Turkish.
 
-## Tested on
+## Devices
+
+It runs in the browser, so any device on the same Wi-Fi can use it. The layout adapts to the screen and switches between 2×4 and 4×2 keys with the orientation.
+
+Tested on real hardware:
 
 | Device | Browser |
 | --- | --- |
 | iPod touch 4th gen | Safari, iOS 6.1.6 |
 | PS Vita | Built-in browser, firmware 3.74 |
+
+Modern iPhone and iPad screen sizes were checked in an emulated browser, not on real devices. Icons stay small on tablets.
 
 The Mac side needs macOS and Node.js 18 or newer.
 
@@ -41,6 +47,8 @@ To try it without installing, run `node server.js`.
 1. Open **Drawer Deck** on the Mac. A notification shows the address and the editor opens.
 2. On the device, join the same Wi-Fi and open `http://<mac-ip>:8787`.
 3. On iOS, use **Add to Home Screen** for full screen, and set Auto-Lock to Never.
+
+The address comes from the Mac you run it on, so there is nothing to configure. If your router later gives the Mac a new address, saved shortcuts stop working. To avoid that, reserve a fixed IP for the Mac in your router's DHCP settings.
 
 macOS asks for permission the first time the server controls Spotify or Music.
 
@@ -80,4 +88,4 @@ Inspired by [OldPhoneDeck](https://github.com/GLAUCOMA82/OldPhoneDeck). Drawer D
 
 ## Türkçe özet
 
-Çekmecedeki eski iPod touch, iPhone veya PS Vita'yı Mac için Stream Deck benzeri bir panele çevirir. Cihaza bir şey kurulmaz: Mac'te küçük bir sunucu çalışır, cihaz tarayıcısından sayfayı açar. Kurmak için `./install.sh` çalıştır, sonra aynı Wi-Fi'daki cihazda `http://<mac-ip>:8787` adresini aç. Deste sayfasında şifre yok, sadece güvendiğin ağlarda kullan.
+Tarayıcısı olan her telefon ve tableti Mac için Stream Deck benzeri bir panele çevirir: her gün kullandığın iPhone'u ya da çekmecedeki eski iPod touch veya PS Vita'yı. Cihaza bir şey kurulmaz: Mac'te küçük bir sunucu çalışır, cihaz tarayıcısından sayfayı açar. Kurmak için `./install.sh` çalıştır, sonra aynı Wi-Fi'daki cihazda `http://<mac-ip>:8787` adresini aç. Deste sayfasında şifre yok, sadece güvendiğin ağlarda kullan.

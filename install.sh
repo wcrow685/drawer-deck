@@ -50,7 +50,7 @@ cat > "$APP/Contents/MacOS/DrawerDeck" <<SH
 #!/bin/bash
 launchctl kickstart "$DOMAIN/$LABEL" 2>/dev/null || launchctl bootstrap "$DOMAIN" "$AGENT"
 IFACE=\$(route -n get default 2>/dev/null | awk '/interface:/{print \$2}')
-IP=\$(ipconfig getifaddr "\$IFACE" 2>/dev/null || echo localhost)
+IP=\$(ipconfig getifaddr "\$IFACE" 2>/dev/null || ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo localhost)
 osascript -e "display notification \"iPod'da aç: http://\$IP:8787\" with title \"Drawer Deck çalışıyor\""
 sleep 1
 open "http://localhost:8787/edit"

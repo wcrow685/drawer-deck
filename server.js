@@ -393,7 +393,7 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, 'text/html; charset=utf-8', fs.readFileSync(path.join(ROOT, 'public', 'edit.html')));
     }
     if (req.method === 'GET' && url === '/api/editor/config') {
-      return json(res, { keys: config.keys.map(({ hasIcon, ...k }) => k), urls: lanAddresses().map((ip) => 'http://' + ip + ':' + PORT) });
+      return json(res, { keys: config.keys.map(({ hasIcon, ...k }) => k), urls: await deckUrls() });
     }
     if (req.method === 'GET' && url === '/api/editor/status') {
       return json(res, {
@@ -469,6 +469,26 @@ function lanAddresses() {
     for (const a of list || []) if (a.family === 'IPv4' && !a.internal) out.push(a.address);
   }
   return out;
+}
+
+// Best address first. VPNs add interfaces and can take over the default route, and a
+// device on the Wi-Fi can't reach those, so physical interfaces win.
+function rankAddresses(interfaces, defaultIface) {
+  const physical = (name) => !/^(utun|tun|tap|ppp|ipsec|bridge|awdl|llw)/.test(name);
+  const ipv4 = (name) => (interfaces[name] || []).filter((a) => a.family === 'IPv4' && !a.internal).map((a) => a.address);
+  const names = Object.keys(interfaces);
+  const order = [
+    ...(physical(defaultIface) ? [defaultIface] : []),
+    ...names.filter(physical),
+    ...names,
+  ];
+  return [...new Set(order.flatMap(ipv4))];
+}
+
+async function deckUrls() {
+  const route = await run('route', ['-n', 'get', 'default']);
+  const iface = (route.match(/interface:\s*(\S+)/) || [])[1] || '';
+  return rankAddresses(os.networkInterfaces(), iface).map((ip) => 'http://' + ip + ':' + PORT);
 }
 
 buildIcons().finally(() => {
