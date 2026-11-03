@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Drawer Deck</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="Deck">
+<link rel="apple-touch-icon-precomposed" href="/apple-touch-icon.png">
+<link rel="icon" href="/apple-touch-icon.png">
+<!-- Written for iOS 6 Safari (iPod touch 4): ES5 only, no flexbox, no fetch, absolute layout. -->
+<style>
+  * { -webkit-box-sizing: border-box; box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0); -webkit-user-select: none; -webkit-touch-callout: none; }
+  html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #090a0f; color: #f1f5f9; font-family: "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  .panel { position: absolute; background: #161922; border: 1px solid #232734; border-radius: 14px; overflow: hidden;
+    -webkit-box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); box-shadow: inset 0 1px 0 rgba(255,255,255,0.04); }
+
+  #np { padding: 8px; }
+  #art { position: absolute; left: 7px; top: 7px; border-radius: 8px; background: #1f2330; background-size: cover; background-position: center; text-align: center; color: #4b5468; }
+  #meta { position: absolute; top: 0; bottom: 0; }
+  #title, #artist { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #title { font-size: 15px; font-weight: bold; }
+  #artist { font-size: 12px; color: #7f8a9e; margin-top: 3px; }
+  #ctrls { position: absolute; right: 4px; top: 0; bottom: 0; width: 120px; }
+  .ctl { position: absolute; top: 50%; width: 40px; height: 40px; margin-top: -20px; border-radius: 20px;
+    -webkit-transition: -webkit-transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.18s; }
+  .ctl.down { background: #232734; -webkit-transform: scale(0.9); }
+  #play { background: #232734; }
+  #play.on { background: #3b82f6; }
+  #play.on.down { background: #2f6ad0; }
+  #prev { left: 0; } #play { left: 40px; } #next { left: 80px; }
+  /* glyphs drawn with borders: emoji arrows render as grey bubbles on iOS 6 */
+  .tri { position: absolute; top: 13px; width: 0; height: 0; border-top: 7px solid transparent; border-bottom: 7px solid transparent; }
+  .tri.r { border-left: 11px solid #f1f5f9; }
+  .tri.l { border-right: 11px solid #f1f5f9; }
+  .bar { position: absolute; top: 13px; width: 3px; height: 14px; background: #f1f5f9; }
+  #play .tri { left: 16px; }
+  #play .bar { display: none; }
+  #play.on .tri { display: none; }
+  #play.on .bar { display: block; }
+  #play .b1 { left: 14px; } #play .b2 { left: 22px; }
+  #prev .bar { left: 11px; } #prev .tri { left: 15px; }
+  #next .tri { left: 13px; } #next .bar { left: 25px; }
+
+  /* keys: soft top highlight + drop shadow, sink in when pressed */
+  .key { position: absolute; text-align: center; border: 1px solid #232734; border-radius: 16px;
+    background: #191c26; background-image: -webkit-linear-gradient(top, #1e2230, #171a23);
+    -webkit-box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    box-shadow: 0 4px 10px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+    -webkit-transition: -webkit-transform 0.18s cubic-bezier(0.16, 1, 0.3, 1); }
+  .key.down { background-image: none; background: #1c2030; -webkit-transform: scale(0.96);
+    -webkit-box-shadow: inset 0 2px 6px rgba(0,0,0,0.6); box-shadow: inset 0 2px 6px rgba(0,0,0,0.6); }
+  .key img { position: absolute; left: 50%; -webkit-filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
+  .key .ph { position: absolute; left: 50%; border-radius: 22%; background: #3b82f6; color: #fff; font-weight: bold; }
+  .key span { position: absolute; left: 0; right: 0; font-size: 11px; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
+
+  #bar { padding: 0 10px; font-size: 11px; color: #7f8a9e; white-space: nowrap; overflow: hidden; }
+  #bar b { color: #f1f5f9; font-weight: 500; }
+  #net { float: left; }
+  #batt { float: right; }
+  .low { color: #f87171 !important; }
+  .warn { color: #fbbf24 !important; }
+  /* RAM badge: the whole bar opens the list, the pill shows it can be tapped */
+  #ramg { float: right; height: 20px; line-height: 20px; margin: 3px 8px 0 0; padding: 0 7px; border-radius: 10px; background: #232734; color: #9aa3b5; }
+  #bar.down { background: #1f2330; }
+
+  /* RAM list, shown over the deck */
+  #ramv { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: #090a0f; display: none; }
+  #ramh { position: absolute; left: 0; right: 0; top: 0; height: 44px; line-height: 44px; padding: 0 12px; font-size: 15px; font-weight: bold; border-bottom: 1px solid #232734; }
+  #ramh b { font-weight: normal; color: #9aa3b5; font-size: 13px; margin-left: 6px; }
+  #ramx { position: absolute; right: 6px; top: 6px; height: 32px; line-height: 32px; padding: 0 14px; border-radius: 16px; background: #232734; font-size: 13px; font-weight: normal; }
+  #ramlist { position: absolute; left: 0; right: 0; top: 45px; bottom: 0; overflow: hidden; }
+  .row { position: relative; height: 44px; line-height: 44px; padding: 0 106px 0 12px; font-size: 14px; border-bottom: 1px solid #161922; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row i { font-style: normal; color: #7f8a9e; font-size: 12px; margin-left: 6px; }
+  .quit { position: absolute; right: 6px; top: 6px; width: 92px; height: 32px; line-height: 32px; text-align: center; border-radius: 16px; background: #232734; font-size: 13px; }
+  .quit.sure { background: #dc2626; }
+  #ramempty { padding: 16px 12px; color: #7f8a9e; font-size: 14px; }
+  #off { position: absolute; left: 0; right: 0; top: 0; bottom: 0; background: rgba(9,10,15,0.88); color: #7f8a9e; font-size: 14px; text-align: center; display: none; }
+</style>
+</head>
+<body>
+<div id="np" class="panel">
+  <div id="art"><span id="note">&#9834;</span></div>
+  <div id="meta"><div id="title">Müzik çalmıyor</div><div id="artist">&nbsp;</div></div>
+  <div id="ctrls">
+    <div id="prev" class="ctl" data-media="prev"><div class="bar"></div><div class="tri l"></div></div>
+    <div id="play" class="ctl" data-media="playpause"><div class="tri r"></div><div class="bar b1"></div><div class="bar b2"></div></div>
+    <div id="next" class="ctl" data-media="next"><div class="tri r"></div><div class="bar"></div></div>
+  </div>
+</div>
+<div id="keys"></div>
+<div id="bar" class="panel"><div id="net"></div><div id="batt"></div><div id="ramg"></div></div>
+<div id="ramv">
+  <div id="ramh">RAM<b id="ramp"></b><div id="ramx">Bitti</div></div>
+  <div id="ramlist"></div>
+</div>
+<div id="off">Mac'e bağlanılamıyor…</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var keys = [];
+  var lastArt = '';
+
+  function req(method, url, cb) {
+    var x = new XMLHttpRequest();
+    x.open(method, url, true);
+    x.timeout = 5000;
+    x.onreadystatechange = function () {
+      if (x.readyState !== 4) return;
+      var data = null;
+      if (x.status === 200) { try { data = JSON.parse(x.responseText); } catch (e) {} }
+      if (cb) cb(data);
+    };
+    x.send(null);
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ---- layout: everything absolute, computed from the window size ----
+  function place(el, x, y, w, h) {
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.width = w + 'px'; el.style.height = h + 'px';
+  }
+
+  function layout() {
+    var W = window.innerWidth, H = window.innerHeight;
+    var land = W > H, g = 6;
+    var npH = land ? 56 : 72, barH = 30;
+    place($('np'), g, g, W - 2 * g, npH);
+    // panels have a 1px border, so inner boxes are 2px smaller
+    place($('art'), 7, 7, npH - 16, npH - 16);
+    $('art').style.lineHeight = (npH - 16) + 'px';
+    $('art').style.fontSize = Math.floor((npH - 16) / 2) + 'px';
+    $('meta').style.left = (npH + 2) + 'px';
+    $('meta').style.right = '128px';
+    $('meta').style.paddingTop = (land ? 9 : 16) + 'px';
+    place($('bar'), g, H - barH - g, W - 2 * g, barH);
+    $('bar').style.lineHeight = (barH - 2) + 'px';
+    $('off').style.lineHeight = H + 'px';
+
+    var cols = land ? 4 : 2, rows = Math.ceil(keys.length / cols) || 1;
+    var top = npH + 2 * g, avail = H - top - barH - 2 * g;
+    var kw = Math.floor((W - (cols + 1) * g) / cols);
+    var kh = Math.floor((avail - (rows - 1) * g) / rows);
+    var icon = Math.min(57, kh - 26, kw - 20);
+    var nodes = $('keys').childNodes;
+    for (var i = 0; i < nodes.length; i++) {
+      var c = i % cols, r = Math.floor(i / cols), k = nodes[i];
+      place(k, g + c * (kw + g), top + r * (kh + g), kw, kh);
+      var pic = k.firstChild;
+      pic.style.width = icon + 'px'; pic.style.height = icon + 'px';
+      pic.style.marginLeft = (-icon / 2) + 'px';
+      pic.style.top = Math.floor((kh - icon - 16) / 2) + 'px';
+      if (pic.className === 'ph') { pic.style.lineHeight = icon + 'px'; pic.style.fontSize = Math.floor(icon / 2) + 'px'; }
+      k.lastChild.style.top = Math.floor((kh - icon - 16) / 2 + icon + 3) + 'px';
+    }
+  }
+
+  // ---- touch handling: act on touchend to skip the 300ms click delay ----
+  function tappable(el, fn) {
+    var t = 'ontouchstart' in window;
+    el.addEventListener(t ? 'touchstart' : 'mousedown', function (e) { el.className += ' down'; e.preventDefault(); }, false);
+    el.addEventListener(t ? 'touchend' : 'mouseup', function (e) {
+      el.className = el.className.replace(/ down/g, '');
+      e.preventDefault();
+      fn();
+    }, false);
+    el.addEventListener(t ? 'touchcancel' : 'mouseleave', function () { el.className = el.className.replace(/ down/g, ''); }, false);
+  }
+
+  function buildKeys(list) {
+    keys = list;
+    var box = $('keys');
+    box.innerHTML = '';
+    for (var i = 0; i < list.length; i++) {
+      var k = document.createElement('div');
+      k.className = 'key';
+      k.innerHTML = (list[i].icon
+        ? '<img src="' + list[i].icon + '">'
+        : '<div class="ph">' + esc(list[i].label.charAt(0)) + '</div>') +
+        '<span>' + esc(list[i].label) + '</span>';
+      (function (n) { tappable(k, function () { req('POST', '/api/key/' + n); }); })(i);
+      box.appendChild(k);
+    }
+    layout();
+  }
+
+  // ---- status rendering ----
+  function speed(b) {
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB/s';
+    if (b >= 1024) return Math.round(b / 1024) + ' KB/s';
+    return Math.round(b) + ' B/s';
+  }
+
+  function shortSpeed(b) {
+    if (b >= 1048576) return (b / 1048576).toFixed(1) + 'M';
+    if (b >= 1024) return Math.round(b / 1024) + 'K';
+    return Math.round(b) + 'B';
+  }
+
+  function render(s) {
+    var np = s.nowPlaying;
+    if (np) {
+      $('title').innerHTML = esc(np.title || '');
+      $('artist').innerHTML = esc(np.player + ' · ' + (np.artist || ''));
+      $('play').className = 'ctl' + (np.playing ? ' on' : '');
+    } else {
+      $('title').innerHTML = 'Müzik çalmıyor';
+      $('artist').innerHTML = '&nbsp;';
+      $('play').className = 'ctl';
+    }
+    var a = np && np.art ? np.art : '';
+    if (a !== lastArt) {
+      lastArt = a;
+      $('art').style.backgroundImage = a ? 'url(' + a + ')' : 'none';
+      $('note').style.display = a ? 'none' : 'inline';
+    }
+
+    // portrait has no room for full units next to the RAM badge
+    var narrow = window.innerWidth < 400, parts = [];
+    $('net').innerHTML = narrow
+      ? '&darr;<b>' + shortSpeed(s.net.down) + '</b> &uarr;<b>' + shortSpeed(s.net.up) + '</b>'
+      : '&darr; <b>' + speed(s.net.down) + '</b> &nbsp; &uarr; <b>' + speed(s.net.up) + '</b>';
+    var cls = s.ram ? (s.ram.level >= 4 ? 'low' : s.ram.level >= 2 ? 'warn' : '') : '';
+    if (s.ram) {
+      $('ramg').innerHTML = 'RAM <b class="' + cls + '">' + s.ram.used + '%</b>';
+      $('ramp').innerHTML = s.ram.used + '% dolu';
+    }
+    for (var i = 0; i < s.batteries.length && (!narrow || i < 2); i++) {
+      var b = s.batteries[i];
+      var bn = !narrow ? b.name : b.name === 'Trackpad' ? 'Pad' : b.name.slice(0, 5);
+      parts.push(esc(bn) + ' <b' + (b.pct <= 20 && !b.charging ? ' class="low"' : '') + '>' + b.pct + '%' + (b.charging ? '+' : '') + '</b>');
+    }
+    $('batt').innerHTML = parts.join(' &nbsp;');
+  }
+
+  // ---- RAM list: the heaviest apps, each quit needs a second tap ----
+  function openRam() {
+    $('ramv').style.display = 'block';
+    loadRam();
+  }
+
+  function loadRam() {
+    req('GET', '/api/ram/apps', function (apps) {
+      var box = $('ramlist');
+      box.innerHTML = '';
+      if (!apps || !apps.length) { box.innerHTML = '<div id="ramempty">Açık uygulama bulunamadı</div>'; return; }
+      var max = Math.floor((window.innerHeight - 45) / 45);
+      for (var i = 0; i < apps.length && i < max; i++) box.appendChild(ramRow(apps[i]));
+    });
+  }
+
+  function ramRow(app) {
+    var row = document.createElement('div');
+    row.className = 'row';
+    var size = app.mb >= 1024 ? (app.mb / 1024).toFixed(1) + ' GB' : app.mb + ' MB';
+    row.innerHTML = esc(app.name) + '<i>' + size + '</i>';
+    var btn = document.createElement('div');
+    btn.className = 'quit';
+    btn.innerHTML = 'Kapat';
+    var sure = false;
+    tappable(btn, function () {
+      if (!sure) {
+        sure = true;
+        btn.className = 'quit sure';
+        btn.innerHTML = 'Emin misin?';
+        setTimeout(function () { sure = false; btn.className = 'quit'; btn.innerHTML = 'Kapat'; }, 3000);
+        return;
+      }
+      btn.innerHTML = 'Kapatılıyor';
+      req('POST', '/api/ram/quit/' + encodeURIComponent(app.name), function () { setTimeout(loadRam, 1500); });
+    });
+    row.appendChild(btn);
+    return row;
+  }
+
+  tappable($('ramx'), function () { $('ramv').style.display = 'none'; });
+  tappable($('bar'), openRam);
+
+  var fails = 0, rev = 0;
+  function poll() {
+    req('GET', '/api/status', function (s) {
+      if (s) {
+        fails = 0; $('off').style.display = 'none'; render(s);
+        // keys were edited on the Mac (or the server restarted): reload them
+        if (s.rev !== rev) req('GET', '/api/config', function (c) { if (c) { rev = c.rev; buildKeys(c.keys); } });
+      }
+      else if (++fails >= 3) $('off').style.display = 'block';
+      setTimeout(poll, 1500);
+    });
+  }
+
+  var media = $('ctrls').childNodes;
+  for (var i = 0; i < media.length; i++) {
+    if (media[i].nodeType !== 1) continue;
+    (function (el) {
+      tappable(el, function () { req('POST', '/api/media/' + el.getAttribute('data-media'), function (s) { if (s) render(s); }); });
+    })(media[i]);
+  }
+
+  document.addEventListener('touchmove', function (e) { e.preventDefault(); }, false);
+  window.addEventListener('resize', layout, false);
+  window.addEventListener('orientationchange', function () { setTimeout(layout, 300); }, false);
+
+  function boot() {
+    req('GET', '/api/config', function (c) {
+      if (c) { rev = c.rev; buildKeys(c.keys); poll(); }
+      else { $('off').style.display = 'block'; setTimeout(boot, 3000); }
+    });
+  }
+  layout();
+  boot();
+})();
+</script>
+</body>
+</html>

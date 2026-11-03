@@ -1,0 +1,9 @@
+# Created at runtime when running from this folder
+config.json
+icons/
+appicons/
+*.log
+.DS_Store
+
+# 3D-printed stand: kept out until it has been printed and tested
+stand/

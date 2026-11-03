@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Drawer Deck Düzenle</title>
+<link rel="icon" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* palette shared with the iPod deck */
+  :root {
+    --bg: #090a0f; --surface: #11141b; --panel: #161922; --key: #191c26; --key-hi: #1f2330; --line: #232734;
+    --text: #f1f5f9; --muted: #7f8a9e; --accent: #3b82f6; --ok: #34d399; --err: #f87171;
+    --mono: "SF Mono", ui-monospace, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; padding-bottom: 40px; }
+  button, input { font: inherit; color: inherit; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 24px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(9,10,15,.85); backdrop-filter: blur(12px); z-index: 2; }
+  header h1 { font-size: 16px; margin: 0; letter-spacing: -.01em; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--muted); background: var(--panel); }
+  .chip i { width: 7px; height: 7px; border-radius: 50%; background: #4b5468; }
+  .chip.on { color: var(--text); }
+  .chip.on i { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+  footer { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 18px; padding: 9px 24px; border-top: 1px solid var(--line); background: var(--surface); font: 11px var(--mono); color: var(--muted); }
+  footer b { color: var(--text); font-weight: 500; }
+  .addr { color: var(--muted); font-size: 13px; }
+  .addr code { color: var(--text); background: var(--panel); border: 1px solid var(--line); padding: 2px 7px; border-radius: 6px; cursor: copy; font: 12px var(--mono); }
+  .spacer { flex: 1; }
+  #msg { font-size: 13px; color: var(--muted); }
+  #msg.ok { color: var(--ok); } #msg.err { color: var(--err); }
+  .btn { background: var(--key); border: 1px solid var(--line); border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+  .btn:hover { background: var(--key-hi); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn:disabled { opacity: .45; cursor: default; }
+
+  main { display: grid; grid-template-columns: auto 1fr; gap: 32px; padding: 24px; max-width: 1200px; margin: 0 auto; }
+  @media (max-width: 760px) { main { grid-template-columns: 1fr; } }
+
+  /* phone preview, same grids as the iPod: 2x4 portrait, 4x2 landscape */
+  .preview { align-self: start; position: sticky; top: 90px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  /* iPod touch body: home button below the screen, or to its right in landscape */
+  .phone { position: relative; width: 300px; padding: 18px 14px 66px; border-radius: 36px; transition: width .2s, padding .2s;
+    background: linear-gradient(160deg, #1a1d26, #0c0e13); border: 1px solid #2a2f3d;
+    box-shadow: 0 24px 60px -20px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.06); }
+  .phone::after { content: ""; position: absolute; left: 50%; bottom: 16px; width: 34px; height: 34px; margin-left: -17px; border-radius: 50%;
+    border: 1px solid #2f3442; background: radial-gradient(circle at 50% 35%, #161922, #0b0d12); }
+  .phone.land { width: 560px; padding: 14px 66px 14px 18px; }
+  .phone.land::after { left: auto; right: 16px; bottom: 50%; margin: 0 0 -17px; }
+  .screen { background: var(--bg); border-radius: 8px; padding: 6px; border: 1px solid #05060a; }
+  .phone-hint { color: var(--muted); font-size: 12px; text-align: center; }
+  #grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .phone.land #grid { grid-template-columns: repeat(4, 1fr); }
+  .tile { background: linear-gradient(180deg, #1e2230, #171a23); border: 1px solid var(--line); border-radius: 14px; height: 94px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; cursor: pointer; user-select: none;
+    box-shadow: 0 4px 10px -2px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.06); transition: transform .18s cubic-bezier(.16,1,.3,1), border-color .15s; }
+  .tile:hover { border-color: #323849; }
+  .tile:active { transform: scale(.96); }
+  .tile.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.25), 0 4px 10px -2px rgba(0,0,0,.5); }
+  .tile.drag-over { background: #1d2a45; }
+  .tile.dragging { opacity: .4; }
+  .tile img { filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); }
+  .tile img, .ph { width: 44px; height: 44px; border-radius: 10px; }
+  .ph { display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 20px; color: #fff; }
+  .ph.url { background: #2a7de1; } .ph.shortcut { background: #b04fd8; } .ph.app { background: #444a57; }
+  .tile span { font-size: 11px; color: #b7bcc7; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .inspector { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 22px; align-self: start; }
+  .inspector h2 { font-size: 15px; margin: 0 0 18px; display: flex; align-items: center; gap: 8px; }
+  .inspector h2 small { font: 11px var(--mono); color: var(--muted); font-weight: 400; }
+  .field { margin-bottom: 18px; }
+  .field > label { display: block; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+  .input { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; outline: none; }
+  .input:focus { border-color: var(--accent); }
+  .seg { display: inline-flex; background: var(--panel); border-radius: 9px; padding: 3px; gap: 2px; }
+  .seg button { background: none; border: 0; padding: 6px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+  .seg button.on { background: var(--key-hi); color: var(--text); }
+
+  #apps { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; max-height: 420px; overflow-y: auto; margin-top: 8px; padding: 2px; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; }
+  .app:hover { background: var(--panel); }
+  .app.on { border-color: var(--accent); background: var(--panel); }
+  .app img { width: 40px; height: 40px; }
+  .app span { font-size: 11px; text-align: center; color: #b7bcc7; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #shortcuts { display: flex; flex-direction: column; gap: 4px; max-height: 360px; overflow-y: auto; }
+  .sc { padding: 8px 11px; border-radius: 8px; cursor: pointer; background: var(--panel); border: 2px solid transparent; }
+  .sc.on { border-color: var(--accent); }
+  .empty { color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Drawer Deck</h1>
+  <div class="chip" id="dev"><i></i><span>iPod bekleniyor</span></div>
+  <div class="addr">Adres: <code id="addr" title="Kopyalamak için tıkla">…</code></div>
+  <div class="spacer"></div>
+  <div id="msg"></div>
+  <button class="btn" id="revert" disabled>Vazgeç</button>
+  <button class="btn primary" id="save" disabled>Kaydet</button>
+</header>
+
+<main>
+  <div class="preview">
+    <div class="seg" id="orient">
+      <button data-o="port" class="on">Dikey</button>
+      <button data-o="land">Yatay</button>
+    </div>
+    <div class="phone" id="phone"><div class="screen"><div id="grid"></div></div></div>
+    <div class="phone-hint">Düzenlemek için tıkla · yer değiştirmek için sürükle</div>
+  </div>
+
+  <section class="inspector" id="insp"></section>
+</main>
+
+<footer><span id="srv">Sunucu: …</span><span id="cnt"></span><span id="up"></span></footer>
+
+<script>
+const $ = (s) => document.querySelector(s);
+let keys = [], saved = '', sel = 0, apps = [], shortcuts = null, appFilter = '';
+
+const kind = (k) => (k.url !== undefined ? 'url' : k.shortcut !== undefined ? 'shortcut' : 'app');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const iconUrl = (name) => '/api/editor/appicon/' + encodeURIComponent(name) + '.png';
+
+function msg(text, cls = '') { $('#msg').textContent = text; $('#msg').className = cls; }
+function dirty() { return JSON.stringify(keys) !== saved; }
+function touch() {
+  const d = dirty();
+  $('#save').disabled = $('#revert').disabled = !d;
+  msg(d ? 'Kaydedilmemiş değişiklik var' : '');
+}
+
+function tileIcon(k) {
+  const t = kind(k);
+  if (t === 'app' && k.app) return `<img src="${iconUrl(k.app)}" alt="">`;
+  const letter = (k.label || k.url || k.shortcut || '?').trim().charAt(0).toUpperCase();
+  return `<div class="ph ${t}">${esc(letter)}</div>`;
+}
+
+function renderGrid() {
+  const g = $('#grid');
+  g.innerHTML = keys.map((k, i) =>
+    `<div class="tile${i === sel ? ' sel' : ''}" draggable="true" data-i="${i}">${tileIcon(k)}<span>${esc(k.label || '—')}</span></div>`
+  ).join('');
+  g.querySelectorAll('.tile').forEach((el) => {
+    const i = +el.dataset.i;
+    el.onclick = () => { sel = i; render(); };
+    el.ondragstart = (e) => { e.dataTransfer.setData('text/plain', i); el.classList.add('dragging'); };
+    el.ondragend = () => el.classList.remove('dragging');
+    el.ondragover = (e) => { e.preventDefault(); el.classList.add('drag-over'); };
+    el.ondragleave = () => el.classList.remove('drag-over');
+    el.ondrop = (e) => {
+      e.preventDefault();
+      const from = +e.dataTransfer.getData('text/plain');
+      if (from === i) return;
+      [keys[from], keys[i]] = [keys[i], keys[from]];
+      sel = i;
+      render(); touch();
+    };
+  });
+}
+
+const host = (v) => v.replace(/^https?:\/\/(www\.)?/i, '').split('/')[0];
+
+function setKind(t) {
+  const k = keys[sel];
+  // A label that was just the old target's name would be wrong for the new kind.
+  const auto = !k.label || k.label === k.app || k.label === k.shortcut || (k.url && k.label === host(k.url));
+  const label = auto ? '' : k.label;
+  keys[sel] = t === 'url' ? { label, url: '' } : t === 'shortcut' ? { label, shortcut: '' } : { label, app: '' };
+  if (t === 'shortcut' && shortcuts === null) loadShortcuts();
+  render(); touch();
+}
+
+// Keep the label in sync with the target until the user types their own.
+function setTarget(field, value, autoLabel) {
+  const k = keys[sel];
+  const prevAuto = !k.label || k.label === k[field] || k.label === autoLabel(k[field] || '');
+  k[field] = value;
+  if (prevAuto) k.label = autoLabel(value);
+  render(); touch();
+}
+
+function renderInspector() {
+  const k = keys[sel], t = kind(k);
+  let body = '';
+  if (t === 'app') {
+    const list = apps.filter((a) => a.toLocaleLowerCase('tr').includes(appFilter.toLocaleLowerCase('tr')));
+    body = `<div class="field"><label>Uygulama</label>
+      <input class="input" id="appq" placeholder="Uygulama ara…" value="${esc(appFilter)}">
+      <div id="apps">${list.map((a) => `<div class="app${a === k.app ? ' on' : ''}" data-a="${esc(a)}"><img loading="lazy" src="${iconUrl(a)}" alt=""><span>${esc(a)}</span></div>`).join('') || '<div class="empty">Sonuç yok</div>'}</div></div>`;
+  } else if (t === 'url') {
+    body = `<div class="field"><label>Adres</label><input class="input" id="url" placeholder="https://…" value="${esc(k.url)}"></div>`;
+  } else {
+    body = `<div class="field"><label>Kestirme</label>` + (shortcuts === null ? '<div class="empty">Yükleniyor…</div>'
+      : shortcuts.length ? `<div id="shortcuts">${shortcuts.map((s) => `<div class="sc${s === k.shortcut ? ' on' : ''}" data-s="${esc(s)}">${esc(s)}</div>`).join('')}</div>`
+      : '<div class="empty">Kestirmeler uygulamasında hiç kestirme yok.</div>') + '</div>';
+  }
+  $('#insp').innerHTML = `
+    <h2>Tuş ${sel + 1} <small>/ ${keys.length}</small></h2>
+    <div class="field"><label>Tür</label><div class="seg">
+      <button data-t="app" class="${t === 'app' ? 'on' : ''}">Uygulama</button>
+      <button data-t="url" class="${t === 'url' ? 'on' : ''}">Web sitesi</button>
+      <button data-t="shortcut" class="${t === 'shortcut' ? 'on' : ''}">Kestirme</button>
+    </div></div>
+    <div class="field"><label>Tuşta yazan ad</label><input class="input" id="label" maxlength="24" value="${esc(k.label)}"></div>
+    ${body}
+    <div class="row"><button class="btn" id="test">Mac'te dene</button></div>`;
+
+  $('#insp').querySelectorAll('.seg button').forEach((b) => b.onclick = () => b.dataset.t !== t && setKind(b.dataset.t));
+  $('#label').oninput = (e) => { k.label = e.target.value; renderGrid(); touch(); };
+  $('#test').onclick = test;
+  if (t === 'app') {
+    const q = $('#appq');
+    q.oninput = (e) => { appFilter = e.target.value; renderInspector(); const n = $('#appq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+    $('#insp').querySelectorAll('.app').forEach((el) => el.onclick = () => setTarget('app', el.dataset.a, (v) => v));
+  } else if (t === 'url') {
+    // Update live without re-rendering the inspector, so the field keeps focus.
+    $('#url').oninput = (e) => {
+      let v = e.target.value.trim();
+      if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+      const wasAuto = !k.label || k.label === host(k.url || '');
+      k.url = v;
+      if (wasAuto) { k.label = host(v); $('#label').value = k.label; }
+      renderGrid(); touch();
+    };
+  } else {
+    $('#insp').querySelectorAll('.sc').forEach((el) => el.onclick = () => setTarget('shortcut', el.dataset.s, (v) => v));
+  }
+}
+
+function render() { renderGrid(); renderInspector(); }
+
+async function api(method, url, body) {
+  const r = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || 'Hata ' + r.status);
+  return data;
+}
+
+async function loadShortcuts() {
+  shortcuts = await api('GET', '/api/editor/shortcuts').catch(() => []);
+  renderInspector();
+}
+
+async function test() {
+  try { await api('POST', '/api/editor/test', keys[sel]); msg('Mac\'te çalıştırıldı', 'ok'); }
+  catch (e) { msg(e.message, 'err'); }
+}
+
+$('#revert').onclick = () => {
+  keys = JSON.parse(saved);
+  render(); touch();
+  msg('Son kaydedilen hâline dönüldü');
+};
+
+$('#save').onclick = async () => {
+  $('#save').disabled = $('#revert').disabled = true;
+  msg('Kaydediliyor…');
+  try {
+    await api('POST', '/api/editor/config', { keys });
+    saved = JSON.stringify(keys);
+    msg('Kaydedildi · iPod birkaç saniyede güncellenir', 'ok');
+  } catch (e) {
+    msg(e.message, 'err');
+    $('#save').disabled = $('#revert').disabled = false;
+  }
+};
+
+function setOrient(o) {
+  $('#phone').classList.toggle('land', o === 'land');
+  $('#orient').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.o === o));
+  try { localStorage.setItem('deck-orient', o); } catch {}
+}
+$('#orient').querySelectorAll('button').forEach((b) => b.onclick = () => setOrient(b.dataset.o));
+try { setOrient(localStorage.getItem('deck-orient') || 'port'); } catch { setOrient('port'); }
+
+// The iPod polls every 1.5 s, so a gap over 10 s means it is asleep or gone.
+function ago(s) { return s < 60 ? s + ' sn' : s < 3600 ? Math.floor(s / 60) + ' dk' : Math.floor(s / 3600) + ' sa'; }
+async function pollStatus() {
+  try {
+    const s = await api('GET', '/api/editor/status');
+    const on = s.device && s.device.ago < 10;
+    $('#dev').classList.toggle('on', !!on);
+    $('#dev span').textContent = on ? 'iPod bağlı · ' + s.device.ip
+      : s.device ? 'iPod ' + ago(s.device.ago) + ' önce görüldü' : 'iPod henüz bağlanmadı';
+    $('#srv').innerHTML = 'Sunucu: <b>çalışıyor</b> · port ' + s.port;
+    $('#up').textContent = 'açık: ' + ago(s.uptime);
+  } catch {
+    $('#dev').classList.remove('on');
+    $('#srv').innerHTML = 'Sunucu: <b style="color:var(--err)">yanıt yok</b>';
+  }
+  $('#cnt').textContent = keys.length + ' tuş';
+}
+pollStatus();
+setInterval(pollStatus, 3000);
+
+$('#addr').onclick = () => { navigator.clipboard.writeText($('#addr').textContent); msg('Adres kopyalandı', 'ok'); };
+window.onbeforeunload = (e) => { if (dirty()) { e.preventDefault(); e.returnValue = ''; } };
+document.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); if (dirty()) $('#save').click(); } });
+
+(async () => {
+  const [cfg, appList] = await Promise.all([api('GET', '/api/editor/config'), api('GET', '/api/editor/apps')]);
+  keys = cfg.keys; saved = JSON.stringify(keys); apps = appList;
+  $('#addr').textContent = cfg.urls[0] || 'http://localhost:8787';
+  if (keys.some((k) => kind(k) === 'shortcut')) loadShortcuts();
+  render();
+})().catch((e) => msg('Sunucuya ulaşılamadı: ' + e.message, 'err'));
+</script>
+</body>
+</html>

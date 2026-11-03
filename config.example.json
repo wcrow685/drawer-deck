@@ -1,0 +1,13 @@
+{
+  "port": 8787,
+  "keys": [
+    { "label": "Safari",     "app": "Safari" },
+    { "label": "Mail",       "app": "Mail" },
+    { "label": "Music",      "app": "Music" },
+    { "label": "Notes",      "app": "Notes" },
+    { "label": "Calendar",   "app": "Calendar" },
+    { "label": "Calculator", "app": "Calculator" },
+    { "label": "Finder",     "app": "Finder" },
+    { "label": "Terminal",   "app": "Terminal" }
+  ]
+}
