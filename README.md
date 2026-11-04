@@ -64,7 +64,7 @@ Use the editor, or edit `config.json` in the settings folder:
 
 ## Stand
 
-`stand/` has a 3D-printable landscape stand for the iPod touch 4th gen, with a charging plug built in: [STL](stand/ipod-touch4-stand.stl) and [OpenSCAD source](stand/ipod-touch4-stand.scad).
+`stand/` has a 3D-printable landscape stand for the iPod touch 4th gen, with a charging plug built in: [STL](stand/ipod-touch4-stand.stl) and [OpenSCAD source](stand/ipod-touch4-stand.scad). It is also on [Printables](https://www.printables.com/model/1901423-ipod-touch-4th-gen-landscape-charging-stand-drawer) and [Thingiverse](https://www.thingiverse.com/thing:7430653).
 
 ![Printed stand holding an iPod touch](docs/stand.jpg)
 
