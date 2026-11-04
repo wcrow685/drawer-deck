@@ -5,5 +5,5 @@ appicons/
 *.log
 .DS_Store
 
-# 3D-printed stand: kept out until it has been printed and tested
-stand/
+# Working previews of the stand
+stand/onizleme-*.png

@@ -62,6 +62,14 @@ Use the editor, or edit `config.json` in the settings folder:
 { "label": "Focus", "shortcut": "My Shortcut" }
 ```
 
+## Stand
+
+`stand/` has a 3D-printable landscape stand for the iPod touch 4th gen, with a charging plug built in: [STL](stand/ipod-touch4-stand.stl) and [OpenSCAD source](stand/ipod-touch4-stand.scad).
+
+![Printed stand holding an iPod touch](docs/stand.jpg)
+
+It prints flat on its base without supports. It has been printed and tested with one iPod touch and one 30-pin cable. Plugs differ between cables, so measure yours first. Change `plug_w`, `plug_t`, `plug_len` and `plug_y` in the source if needed, then export a new STL.
+
 ## Security
 
 **Only use this on a network you trust.** The deck page has no password, so anyone on the same network can open it, press keys and quit the apps in the RAM list. Keys can only run what you configured.
@@ -88,4 +96,4 @@ Inspired by [OldPhoneDeck](https://github.com/GLAUCOMA82/OldPhoneDeck). Drawer D
 
 ## Türkçe özet
 
-Tarayıcısı olan her telefon ve tableti Mac için Stream Deck benzeri bir panele çevirir: her gün kullandığın iPhone'u ya da çekmecedeki eski iPod touch veya PS Vita'yı. Cihaza bir şey kurulmaz: Mac'te küçük bir sunucu çalışır, cihaz tarayıcısından sayfayı açar. Kurmak için `./install.sh` çalıştır, sonra aynı Wi-Fi'daki cihazda `http://<mac-ip>:8787` adresini aç. Deste sayfasında şifre yok, sadece güvendiğin ağlarda kullan.
+Tarayıcısı olan her telefon ve tableti Mac için Stream Deck benzeri bir panele çevirir: her gün kullandığın iPhone'u ya da çekmecedeki eski iPod touch veya PS Vita'yı. Cihaza bir şey kurulmaz: Mac'te küçük bir sunucu çalışır, cihaz tarayıcısından sayfayı açar. Kurmak için `./install.sh` çalıştır, sonra aynı Wi-Fi'daki cihazda `http://<mac-ip>:8787` adresini aç. Deste sayfasında şifre yok, sadece güvendiğin ağlarda kullan. iPod touch 4 için 3D baskı stand `stand/` klasöründe.
