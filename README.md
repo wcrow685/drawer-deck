@@ -10,6 +10,7 @@ Turn any phone or tablet with a web browser into a Stream Deck-style control pan
 - **Now playing** from Spotify or Apple Music, with cover art and playback controls
 - **Live stats:** network speed, Mac and Bluetooth battery levels, RAM usage
 - **RAM list:** tap the bottom bar to see the heaviest apps and quit one
+- **Quit from a key:** hold an app key for half a second, then tap it again to quit the app
 - **Editor on the Mac:** assign keys, rename them and drag to reorder; the device updates by itself
 - **No dependencies:** plain Node.js, and ES5 on the device so very old browsers work
 
@@ -72,7 +73,7 @@ It prints flat on its base without supports. It has been printed and tested with
 
 ## Security
 
-**Only use this on a network you trust.** The deck page has no password, so anyone on the same network can open it, press keys and quit the apps in the RAM list. Keys can only run what you configured.
+**Only use this on a network you trust.** The deck page has no password, so anyone on the same network can open it, press keys and quit the apps on your keys or in the RAM list. Keys can only run what you configured.
 
 The editor only works from the Mac itself, and the server refuses requests that come from other websites.
 

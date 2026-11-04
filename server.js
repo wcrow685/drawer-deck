@@ -282,8 +282,8 @@ const APP_ROOTS = [
   path.join(os.homedir(), 'Applications') + '/',
 ];
 
-// Real apps only, each with its helper processes added up.
-async function topApps() {
+// Real apps only, each with its helper processes added up, heaviest first.
+async function runningApps() {
   const out = await run('ps', ['-axo', 'rss=,comm=']);
   const totals = new Map();
   for (const line of out.split('\n')) {
@@ -294,16 +294,27 @@ async function topApps() {
   }
   return [...totals]
     .map(([name, kb]) => ({ name, mb: Math.round(kb / 1024) }))
-    .sort((a, b) => b.mb - a.mb)
-    .slice(0, 8);
+    .sort((a, b) => b.mb - a.mb);
+}
+
+async function topApps() {
+  return (await runningApps()).slice(0, 8);
 }
 
 // A normal quit, so apps with unsaved work can still ask. Only running apps are accepted.
-async function quitApp(name) {
-  if (!(await topApps()).some((a) => a.name === name)) return false;
+async function quitApp(name, apps) {
+  if (!apps.some((a) => a.name === name)) return false;
   const safe = name.replace(/[\\"]/g, '\\$&');
   await osa(`ignoring application responses\ntell application "${safe}" to quit\nend ignoring`);
   return true;
+}
+
+// Finder is left out: macOS keeps it running, so quitting it from a key means nothing.
+const canQuit = (key) => Boolean(key.app) && key.app !== 'Finder';
+
+async function quitKeyApp(key) {
+  if (!canQuit(key)) return false;
+  return quitApp(path.basename(findApp(key.app) || key.app, '.app'), await runningApps());
 }
 
 // ---------- status cache ----------
@@ -373,7 +384,7 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(path.join(ROOT, 'public', 'apple-touch-icon.png')).pipe(res);
   }
   if (req.method === 'GET' && url === '/api/config') {
-    return json(res, { rev, keys: config.keys.map((k, i) => ({ label: k.label, icon: k.hasIcon ? '/icon/' + i + '.png?v=' + rev : '' })) });
+    return json(res, { rev, keys: config.keys.map((k, i) => ({ label: k.label, icon: k.hasIcon ? '/icon/' + i + '.png?v=' + rev : '', quit: canQuit(k) })) });
   }
   if (req.method === 'GET' && url === '/api/status') {
     const wasIdle = Date.now() - lastClient > 10000;
@@ -447,6 +458,12 @@ const server = http.createServer(async (req, res) => {
     await pressKey(key);
     return json(res, { ok: true });
   }
+  m = url.match(/^\/api\/key\/(\d+)\/quit$/);
+  if (req.method === 'POST' && m) {
+    const key = config.keys[Number(m[1])];
+    if (!key) return send(res, 404, 'text/plain', 'no key');
+    return json(res, { ok: await quitKeyApp(key) });
+  }
   m = url.match(/^\/api\/media\/(\w+)$/);
   if (req.method === 'POST' && m) {
     await media(m[1]);
@@ -458,7 +475,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === 'POST' && m) {
     let name = '';
     try { name = decodeURIComponent(m[1]); } catch { return send(res, 400, 'text/plain', 'bad name'); }
-    return json(res, { ok: await quitApp(name) });
+    return json(res, { ok: await quitApp(name, await topApps()) });
   }
   send(res, 404, 'text/plain', 'not found');
 });

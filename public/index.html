@@ -54,6 +54,9 @@
   .key img { position: absolute; left: 50%; -webkit-filter: drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
   .key .ph { position: absolute; left: 50%; border-radius: 22%; background: #3b82f6; color: #fff; font-weight: bold; }
   .key span { position: absolute; left: 0; right: 0; font-size: 11px; color: #9aa3b5; white-space: nowrap; overflow: hidden; }
+  .key .kq { position: absolute; left: 0; right: 0; top: 0; bottom: 0; z-index: 2; border-radius: 15px;
+    background: rgba(220,38,38,0.92); color: #fff; font-size: 12px; font-weight: bold; }
+  .key .kq.note { background: rgba(35,39,52,0.94); }
 
   #bar { padding: 0 10px; font-size: 11px; color: #7f8a9e; white-space: nowrap; overflow: hidden; }
   #bar b { color: #f1f5f9; font-weight: 500; }
@@ -161,19 +164,67 @@
   }
 
   // ---- touch handling: act on touchend to skip the 300ms click delay ----
-  function tappable(el, fn) {
-    var t = 'ontouchstart' in window;
-    el.addEventListener(t ? 'touchstart' : 'mousedown', function (e) { el.className += ' down'; e.preventDefault(); }, false);
-    el.addEventListener(t ? 'touchend' : 'mouseup', function (e) {
+  // onHold is optional: it fires after half a second, and the release then does nothing.
+  function tappable(el, fn, onHold) {
+    var t = 'ontouchstart' in window, timer = null, held = false, active = false;
+    function release() {
+      clearTimeout(timer);
+      active = false;
       el.className = el.className.replace(/ down/g, '');
+    }
+    el.addEventListener(t ? 'touchstart' : 'mousedown', function (e) {
+      el.className += ' down';
       e.preventDefault();
-      fn();
+      held = false;
+      active = true;
+      if (onHold) timer = setTimeout(function () { held = true; onHold(); }, 500);
     }, false);
-    el.addEventListener(t ? 'touchcancel' : 'mouseleave', function () { el.className = el.className.replace(/ down/g, ''); }, false);
+    el.addEventListener(t ? 'touchend' : 'mouseup', function (e) {
+      var tap = active && !held;
+      release();
+      e.preventDefault();
+      if (tap) fn();
+    }, false);
+    el.addEventListener(t ? 'touchcancel' : 'mouseleave', release, false);
+  }
+
+  // ---- quit from a key: hold to arm it, then tap once more within 3 seconds ----
+  var armed = null;
+
+  function keyNote(k, text, cls) {
+    var o = document.createElement('div');
+    o.className = 'kq' + cls;
+    o.innerHTML = esc(text);
+    o.style.lineHeight = k.offsetHeight + 'px';
+    k.insertBefore(o, k.lastChild);
+    return o;
+  }
+
+  function disarm() {
+    if (!armed) return;
+    clearTimeout(armed.timer);
+    if (armed.note.parentNode) armed.note.parentNode.removeChild(armed.note);
+    armed = null;
+  }
+
+  function arm(k, n) {
+    disarm();
+    armed = { n: n, note: keyNote(k, 'Kapat?', ''), timer: setTimeout(disarm, 3000) };
+  }
+
+  function pressKey(k, n) {
+    var quit = armed && armed.n === n;
+    disarm();
+    if (!quit) return req('POST', '/api/key/' + n);
+    req('POST', '/api/key/' + n + '/quit', function (r) {
+      var o = keyNote(k, r && r.ok ? 'Kapatılıyor' : 'Açık değil', ' note');
+      setTimeout(function () { if (o.parentNode) o.parentNode.removeChild(o); }, 1200);
+    });
   }
 
   function buildKeys(list) {
     keys = list;
+    disarm();
     var box = $('keys');
     box.innerHTML = '';
     for (var i = 0; i < list.length; i++) {
@@ -183,7 +234,9 @@
         ? '<img src="' + list[i].icon + '">'
         : '<div class="ph">' + esc(list[i].label.charAt(0)) + '</div>') +
         '<span>' + esc(list[i].label) + '</span>';
-      (function (n) { tappable(k, function () { req('POST', '/api/key/' + n); }); })(i);
+      (function (k, n, canQuit) {
+        tappable(k, function () { pressKey(k, n); }, canQuit ? function () { arm(k, n); } : null);
+      })(k, i, list[i].quit);
       box.appendChild(k);
     }
     layout();
